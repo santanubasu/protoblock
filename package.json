@@ -7,6 +7,10 @@
     "index.js",
     "compile.js"
   ],
+  "repository":{
+    "type" : "git",
+    "url" : "git@github.com:santanubasu/protoblock.git"
+  },
   "dependencies": {
     "dot": "1.0.x",
     "glob":"5.0.10",
