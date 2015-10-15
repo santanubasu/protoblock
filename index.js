@@ -25,14 +25,13 @@ function setEventEmitter(ee) {
     module.exports.eventEmitter = eventEmitter = ee;
 }
 
-console.log("Defining protoblock binding classes");
-
 var Binding = Object.extend({
+    metadataKey:"_m",
     template:undefined,
     initialize:function(options) {
         _.extend(
             this,
-            _.pick(options?options:{}, "injectionKey")
+            _.pick(options?options:{}, "injectionKey", "metadataKey")
         )
         this.observers = {};
         this.setContext(options.$context);
@@ -439,7 +438,7 @@ var ObjectBinding = Binding.extend({
         return this;
     },
     render:function() {
-        var $newEl = $(this.template(this.model, this.model._m||{}));
+        var $newEl = $(this.template(this.model, this.model[this.metadataKey]||{}));
         for (var modelKey in this.bindings) {
             for (var viewKey in this.bindings[modelKey]) {
                 var binding = this.bindings[modelKey][viewKey];
@@ -499,12 +498,12 @@ var ValueBinding = Binding.extend({
     },
     render:function() {
         var metadata;
-        if (this.model._m) {
-            metadata = this.pick(this.propKey, this.model._m);
+        if (this.model[this.metadataKey]) {
+            // TODO for deep propKeys, not sure this is correct
+            metadata = this.pick(this.propKey, this.model[this.metadataKey]);
         }
-        metadata = metadata||{};
         var value = this.pick(this.propKey)
-        var $newEl = $(this.template(value, metadata));
+        var $newEl = $(this.template(value, metadata||{}));
         $newEl.attr("inject", this.injectionKey);
         return $newEl;
     }
