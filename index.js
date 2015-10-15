@@ -28,6 +28,10 @@ function setEventEmitter(ee) {
 var Binding = Object.extend({
     metadataKey:"_m",
     template:undefined,
+    arrayPathPattern:/[\[\]]]/g,
+    toObjectPath:function(observePath) {
+        return observePath.replace(this.arrayPathPattern, ".");
+    },
     initialize:function(options) {
         _.extend(
             this,
