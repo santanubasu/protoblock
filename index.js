@@ -29,13 +29,14 @@ var Binding = Object.extend({
     metadataKey:"_m",
     template:undefined,
     arrayPathPattern:/[\[\]]]/g,
+    objectPathDelimiterPattern:/\./g,
     toObjectPath:function(observePath) {
         return observePath.replace(this.arrayPathPattern, ".");
     },
     initialize:function(options) {
         _.extend(
             this,
-            _.pick(options?options:{}, "injectionKey", "metadataKey")
+            _.get(options?options:{}, "injectionKey", "metadataKey")
         )
         this.observers = {};
         this.setContext(options.$context);
@@ -50,7 +51,22 @@ var Binding = Object.extend({
         delete this.$context;
         delete this.$el;
     },
-    put:function(path, value, root) {
+    meta:function(path) {
+        if (_.isObject(path)) {
+            return path[this.metadataKey];
+        }
+        else if (_.isString(path)) {
+            var target = this.model;
+            var objectPath = this.toObjectPath(path);
+            var parts = objectPath.split(this.objectPathDelimiterPattern);
+            var pathToParent = parts.slice(-1);
+            var parent = ObjectPath.get(target, pathToParent);
+            if (parent&&parent[this.metadataKey]) {
+                return parent[this.metadataKey][_.last(parts)];
+            }
+        }
+    },
+    set:function(path, value, root) {
         if (!root) {
             root = this.model;
         }
@@ -59,7 +75,7 @@ var Binding = Object.extend({
         }
         ObjectPath.set(root, path, value);
     },
-    pick:function(path, root) {
+    get:function(path, root) {
         if (!root) {
             root = this.model;
         }
@@ -365,10 +381,15 @@ var ObjectBinding = Binding.extend({
                     propKey = parts[0];
                     viewKey = key;
                 }
-                else {
+                else if (parts.length===2) {
                     modelKey = parts[0];
                     propKey = parts[1];
                     viewKey = key;
+                }
+                else if (parts.length===3) {
+                    modelKey = parts[0];
+                    propKey = parts[1];
+                    viewKey = parts[2];
                 }
                 this.addBinding({
                     modelKey:modelKey,
