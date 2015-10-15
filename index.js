@@ -7,7 +7,8 @@ if (!(typeof $ === "function")) {
 
 require("node-polyfill");
 
-var observe = require("observe-js");
+var ObjectPath = require("object-path");
+var Observe = require("observe-js");
 var EventEmitter2 = require("eventemitter2").EventEmitter2;
 
 if (!global._eventEmitter) {
@@ -46,7 +47,6 @@ var Binding = Object.extend({
         delete this.$context;
         delete this.$el;
     },
-    // TODO pick and put need to handle undefined path segments
     put:function(path, value, root) {
         if (!root) {
             root = this.model;
@@ -54,12 +54,7 @@ var Binding = Object.extend({
         if (!path) {
             throw "Path cannot be empty or undefined"
         }
-        var parts = path.split(".");
-        var model = root;
-        for (var i=0; i<parts.length-1; i++) {
-            model = model[parts[i]];
-        }
-        model[parts[i]] = value;
+        ObjectPath.set(root, path, value);
     },
     pick:function(path, root) {
         if (!root) {
@@ -68,12 +63,7 @@ var Binding = Object.extend({
         if (!path) {
             return root;
         }
-        var parts = path.split(".");
-        var model = root;
-        for (var i=0; i<parts.length; i++) {
-            model = model[parts[i]];
-        }
-        return model;
+        return ObjectPath.get(root, path);
     },
     setContext:function($context) {
         if ($context&&$context.is(this.$context)) {
@@ -254,7 +244,7 @@ var CollectionBinding = Binding.extend({
         }.bind(this));
     },
     attachObservers:function() {
-        var itemObserver = new observe.ArrayObserver(this.model);
+        var itemObserver = new Observe.ArrayObserver(this.model);
         itemObserver.open(this.observe.bind(this));
         this.observers[""] = itemObserver;
         return this;
@@ -438,7 +428,7 @@ var ObjectBinding = Binding.extend({
     the ObjectObserver only observes direct properties of this.model
     */
     attachObservers:function() {
-        var propertyObserver = new observe.ObjectObserver(this.model);
+        var propertyObserver = new Observe.ObjectObserver(this.model);
         propertyObserver.open(this.observe.bind(this));
         this.observers[""] = propertyObserver;
         return this;
@@ -494,7 +484,7 @@ var ValueBinding = Binding.extend({
         return this;
     },
     attachObservers:function() {
-        var pathObserver = new observe.PathObserver(this.model, this.propKey);
+        var pathObserver = new Observe.PathObserver(this.model, this.propKey);
         pathObserver.open(this.observe.bind(this));
         this.observers[this.propKey] = pathObserver;
         return this;
