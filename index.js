@@ -52,8 +52,11 @@ var Binding = Object.extend({
         delete this.$el;
     },
     meta:function(path) {
-        if (_.isObject(path)) {
-            return path[this.metadataKey];
+        if (!path) {
+            return this.model[this.metadataKey]||{};
+        }
+        else if (_.isObject(path)) {
+            return path[this.metadataKey]||{};
         }
         else if (_.isString(path)) {
             var target = this.model;
@@ -62,7 +65,10 @@ var Binding = Object.extend({
             var pathToParent = parts.slice(-1);
             var parent = ObjectPath.get(target, pathToParent);
             if (parent&&parent[this.metadataKey]) {
-                return parent[this.metadataKey][_.last(parts)];
+                return parent[this.metadataKey][_.last(parts)]||{};
+            }
+            else {
+                return {};
             }
         }
     },
@@ -463,7 +469,7 @@ var ObjectBinding = Binding.extend({
         return this;
     },
     render:function() {
-        var $newEl = $(this.template(this.model, this.model[this.metadataKey]||{}));
+        var $newEl = $(this.template(this.model, this.meta()));
         for (var modelKey in this.bindings) {
             for (var viewKey in this.bindings[modelKey]) {
                 var binding = this.bindings[modelKey][viewKey];
@@ -522,13 +528,8 @@ var ValueBinding = Binding.extend({
         this.update();
     },
     render:function() {
-        var metadata;
-        if (this.model[this.metadataKey]) {
-            // TODO for deep propKeys, not sure this is correct
-            metadata = this.pick(this.propKey, this.model[this.metadataKey]);
-        }
         var value = this.pick(this.propKey)
-        var $newEl = $(this.template(value, metadata||{}));
+        var $newEl = $(this.template(value, this.meta(this.propKey)));
         $newEl.attr("inject", this.injectionKey);
         return $newEl;
     }
