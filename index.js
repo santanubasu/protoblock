@@ -36,7 +36,7 @@ var Binding = Object.extend({
     initialize:function(options) {
         _.extend(
             this,
-            _.get(options?options:{}, "injectionKey", "metadataKey")
+            _.pick(options?options:{}, "injectionKey", "metadataKey")
         )
         this.observers = {};
         this.setContext(options.$context);
@@ -71,6 +71,12 @@ var Binding = Object.extend({
                 return {};
             }
         }
+    },
+    getRenderModel:function() {
+        return this.model;
+    },
+    getRenderMetadata:function() {
+        return this.meta();
     },
     set:function(path, value, root) {
         if (!root) {
@@ -280,7 +286,7 @@ var CollectionBinding = Binding.extend({
         return this;
     },
     render:function() {
-        var $newEl = $(this.template(this.model));
+        var $newEl = $(this.template(this.getRenderModel()));
         var $itemsEl = $(this.bindings
             .map(function(binding) {
                 return binding.$el
@@ -329,7 +335,7 @@ var ObjectBinding = Binding.extend({
         if (this.model) {
             this.attachObservers();
             for (var modelKey in this.bindings) {
-                var model = this.pick(modelKey);
+                var model = this.get(modelKey);
                 if (model) {
                     for (var viewKey in this.bindings[modelKey]) {
                         this.bindings[modelKey][viewKey].setModel(model);
@@ -341,10 +347,12 @@ var ObjectBinding = Binding.extend({
         return this;
     },
     addBinding:function(options) {
-        options = _.extend({}, options);
-        if (!("modelKey" in options)) {
-            throw "Cannot add a binding without supplying a modelKey"
-        }
+        options = _.extend(
+            {
+                modelKey:""
+            },
+            options
+        );
         if (options.viewKey) {
             options.binding.injectionKey = options.viewKey;
         }
@@ -367,7 +375,7 @@ var ObjectBinding = Binding.extend({
         options.binding.setContext(this.$el);
         this.bindings[options.modelKey][options.viewKey] = options.binding;
         if (!options.binding.model&&this.model) {
-            options.binding.setModel(this.pick(options.modelKey));
+            options.binding.setModel(this.get(options.modelKey));
         }
         else {
             options.binding.update();
@@ -469,7 +477,7 @@ var ObjectBinding = Binding.extend({
         return this;
     },
     render:function() {
-        var $newEl = $(this.template(this.model, this.meta()));
+        var $newEl = $(this.template(this.getRenderModel(), this.getRenderMetadata()));
         for (var modelKey in this.bindings) {
             for (var viewKey in this.bindings[modelKey]) {
                 var binding = this.bindings[modelKey][viewKey];
@@ -502,6 +510,12 @@ var ValueBinding = Binding.extend({
         this.setModel(options.model);
         return this;
     },
+    getRenderModel:function() {
+        return this.get(this.propKey);
+    },
+    getRenderMetadata:function() {
+        return this.meta(this.propKey);
+    },
     setModel:function(model) {
         if (this.model===model) {
             return;
@@ -528,8 +542,7 @@ var ValueBinding = Binding.extend({
         this.update();
     },
     render:function() {
-        var value = this.pick(this.propKey)
-        var $newEl = $(this.template(value, this.meta(this.propKey)));
+        var $newEl = $(this.template(this.getRenderModel(), this.getRenderMetadata()));
         $newEl.attr("inject", this.injectionKey);
         return $newEl;
     }
