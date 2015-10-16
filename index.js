@@ -26,17 +26,33 @@ function setEventEmitter(ee) {
 }
 
 var Binding = Object.extend({
-    metadataKey:"_m",
+    metaKey:"_m",
     template:undefined,
     arrayPathPattern:/[\[\]]]/g,
     objectPathDelimiterPattern:/\./g,
     toObjectPath:function(observePath) {
         return observePath.replace(this.arrayPathPattern, ".");
     },
+    parseBindingKey:function(key) {
+        var parts = key.split(":");
+        var modelKey;
+        var viewKey;
+        if (parts.length===1) {
+            modelKey = parts[0];
+        }
+        else if (parts.length===2) {
+            modelKey = parts[0];
+            viewKey = parts[0]+"."+parts[1];
+        }
+        return {
+            modelKey:modelKey,
+            viewKey:viewKey
+        }
+    },
     initialize:function(options) {
         _.extend(
             this,
-            _.pick(options?options:{}, "injectionKey", "metadataKey")
+            _.pick(options?options:{}, "injectionKey", "metaKey")
         )
         this.observers = {};
         this.setContext(options.$context);
@@ -53,10 +69,10 @@ var Binding = Object.extend({
     },
     meta:function(path) {
         if (!path) {
-            return this.model[this.metadataKey]||{};
+            return this.model[this.metaKey]||{};
         }
         else if (_.isObject(path)) {
-            return path[this.metadataKey]||{};
+            return path[this.metaKey]||{};
         }
         else if (_.isString(path)) {
             var target = this.model;
@@ -64,8 +80,8 @@ var Binding = Object.extend({
             var parts = objectPath.split(this.objectPathDelimiterPattern);
             var pathToParent = parts.slice(-1);
             var parent = ObjectPath.get(target, pathToParent);
-            if (parent&&parent[this.metadataKey]) {
-                return parent[this.metadataKey][_.last(parts)]||{};
+            if (parent&&parent[this.metaKey]) {
+                return parent[this.metaKey][_.last(parts)]||{};
             }
             else {
                 return {};
@@ -385,40 +401,12 @@ var ObjectBinding = Binding.extend({
     addBindings:function(bindings) {
         for (var key in bindings) {
             var binding = bindings[key];
-            if (ValueBinding.isPrototypeOf(binding)) {
-                var parts = key.split(":");
-                var modelKey;
-                var viewKey;
-                var propKey;
-                if (parts.length===1) {
-                    modelKey = "";
-                    propKey = parts[0];
-                    viewKey = key;
-                }
-                else if (parts.length===2) {
-                    modelKey = parts[0];
-                    propKey = parts[1];
-                    viewKey = key;
-                }
-                else if (parts.length===3) {
-                    modelKey = parts[0];
-                    propKey = parts[1];
-                    viewKey = parts[2];
-                }
-                this.addBinding({
-                    modelKey:modelKey,
-                    viewKey:viewKey,
-                    binding:binding.new({
-                        propKey:propKey
-                    })
-                });
-            }
-            else {
-                this.addBinding({
-                    modelKey:key,
-                    binding:binding.new()
-                });
-            }
+            var keyParse = binding.parseBindingKey(key);
+            this.addBinding({
+                modelKey:keyParse.modelKey,
+                viewKey:keyParse.viewKey,
+                binding:binding.new(keyParse.options)
+            });
         }
         return this;
     },
@@ -502,6 +490,34 @@ var ObjectBinding = Binding.extend({
 });
 
 var ValueBinding = Binding.extend({
+    parseBindingKey:function(key) {
+        var parts = key.split(":");
+        var modelKey;
+        var viewKey;
+        var propKey;
+        if (parts.length===1) {
+            modelKey = "";
+            propKey = parts[0];
+            viewKey = parts[0];
+        }
+        else if (parts.length===2) {
+            modelKey = parts[0];
+            propKey = parts[1];
+            viewKey = parts[0]+"."+parts[1];
+        }
+        else if (parts.length===3) {
+            modelKey = parts[0];
+            viewKey = parts[1];
+            propKey = parts[2];
+        }
+        return {
+            modelKey:modelKey,
+            viewKey:viewKey,
+            options:{
+                propKey:propKey
+            }
+        };
+    },
     initialize:function(options) {
         options = _.extend({}, options);
         Binding.initialize.call(this, options);
@@ -550,6 +566,7 @@ var ValueBinding = Binding.extend({
 
 module.exports = {
     setEventEmitter:setEventEmitter,
+    Binding:Binding,
     ValueBinding:ValueBinding,
     ObjectBinding:ObjectBinding,
     CollectionBinding:CollectionBinding
