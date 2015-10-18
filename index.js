@@ -67,6 +67,12 @@ var Binding = Object.extend({
         delete this.$context;
         delete this.$el;
     },
+    getRenderModel:function() {
+        return this.model;
+    },
+    getRenderMetadata:function() {
+        return this.meta();
+    },
     meta:function(path) {
         if (!path) {
             return this.model[this.metaKey]||{};
@@ -78,7 +84,7 @@ var Binding = Object.extend({
             var target = this.model;
             var objectPath = this.toObjectPath(path);
             var parts = objectPath.split(this.objectPathDelimiterPattern);
-            var pathToParent = parts.slice(-1);
+            var pathToParent = parts.slice(0, -1);
             var parent = ObjectPath.get(target, pathToParent);
             if (parent&&parent[this.metaKey]) {
                 return parent[this.metaKey][_.last(parts)]||{};
@@ -87,12 +93,6 @@ var Binding = Object.extend({
                 return {};
             }
         }
-    },
-    getRenderModel:function() {
-        return this.model;
-    },
-    getRenderMetadata:function() {
-        return this.meta();
     },
     set:function(path, value, root) {
         if (!root) {
