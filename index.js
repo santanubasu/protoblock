@@ -107,8 +107,8 @@ var Binding = Object.extend({
         if (!root) {
             root = this.model;
         }
-        if (!path) {
-            return root;
+        if (_.isUndefined(path)) {
+            return undefined;
         }
         return ObjectPath.get(root, path);
     },
