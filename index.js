@@ -71,11 +71,11 @@ var Binding = Object.extend({
         return this.model;
     },
     getRenderMetadata:function() {
-        return this.meta();
+        return this.meta("");
     },
     meta:function(path) {
         if (!path) {
-            return this.model[this.metaKey]||{};
+            return {};
         }
         else if (_.isObject(path)) {
             return path[this.metaKey]||{};
