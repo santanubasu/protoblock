@@ -489,32 +489,32 @@ var ObjectBinding = Binding.extend({
     }
 });
 
-var ValueBinding = Binding.extend({
+var PathBinding = Binding.extend({
     parseBindingKey:function(key) {
         var parts = key.split(":");
         var modelKey;
         var viewKey;
-        var propKey;
+        var path;
         if (parts.length===1) {
             modelKey = "";
-            propKey = parts[0];
+            path = parts[0];
             viewKey = parts[0];
         }
         else if (parts.length===2) {
             modelKey = parts[0];
-            propKey = parts[1];
+            path = parts[1];
             viewKey = parts[0]+"."+parts[1];
         }
         else if (parts.length===3) {
             modelKey = parts[0];
             viewKey = parts[1];
-            propKey = parts[2];
+            path = parts[2];
         }
         return {
             modelKey:modelKey,
             viewKey:viewKey,
             options:{
-                propKey:propKey
+                path:path
             }
         };
     },
@@ -522,15 +522,15 @@ var ValueBinding = Binding.extend({
         options = _.extend({}, options);
         Binding.initialize.call(this, options);
         this.bindings = {};
-        this.propKey = options.propKey;
+        this.path = options.path;
         this.setModel(options.model);
         return this;
     },
     getRenderModel:function() {
-        return this.get(this.propKey);
+        return this.get(this.path);
     },
     getRenderMetadata:function() {
-        return this.meta(this.propKey);
+        return this.meta(this.path);
     },
     setModel:function(model) {
         if (this.model===model) {
@@ -544,14 +544,14 @@ var ValueBinding = Binding.extend({
         return this;
     },
     attachObservers:function() {
-        var pathObserver = new Observe.PathObserver(this.model, this.propKey);
+        var pathObserver = new Observe.PathObserver(this.model, this.path);
         pathObserver.open(this.observe.bind(this));
-        this.observers[this.propKey] = pathObserver;
+        this.observers[this.path] = pathObserver;
         return this;
     },
     detachObservers:function() {
-        this.observers[this.propKey].close();
-        delete this.observers[this.propKey];
+        this.observers[this.path].close();
+        delete this.observers[this.path];
         return this;
     },
     observe:function(newValue, oldValue) {
@@ -567,7 +567,7 @@ var ValueBinding = Binding.extend({
 module.exports = {
     setEventEmitter:setEventEmitter,
     Binding:Binding,
-    ValueBinding:ValueBinding,
+    PathBinding:PathBinding,
     ObjectBinding:ObjectBinding,
     CollectionBinding:CollectionBinding
 }
