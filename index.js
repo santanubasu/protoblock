@@ -9,21 +9,7 @@ require("node-polyfill");
 
 var ObjectPath = require("object-path");
 var Observe = require("observe-js");
-var EventEmitter2 = require("eventemitter2").EventEmitter2;
-
-if (!global._eventEmitter) {
-    global._eventEmitter = new EventEmitter2({
-        wildcard: true,
-        maxListeners: 100
-    })
-}
-
-function setEventEmitter(ee) {
-    if (module.exports.eventEmitter) {
-        throw "Cannot set the component event emitter because it is already set."
-    }
-    module.exports.eventEmitter = eventEmitter = ee;
-}
+var extend = require("node.extend");
 
 var Binding = Object.extend({
     metaKey:"_m",
@@ -32,22 +18,6 @@ var Binding = Object.extend({
     objectPathDelimiterPattern:/\./g,
     toObjectPath:function(observePath) {
         return observePath.replace(this.arrayPathPattern, ".");
-    },
-    parseBindingKey:function(key) {
-        var parts = key.split(":");
-        var modelKey;
-        var viewKey;
-        if (parts.length===1) {
-            modelKey = parts[0];
-        }
-        else if (parts.length===2) {
-            modelKey = parts[0];
-            viewKey = parts[0]+"."+parts[1];
-        }
-        return {
-            modelKey:modelKey,
-            viewKey:viewKey
-        }
     },
     initialize:function(options) {
         _.extend(
@@ -163,7 +133,14 @@ var Binding = Object.extend({
             $targetEl.replaceWith($injectEl);
         }
     },
+    skipUpdate:function() {
+        this.skipNextUpdate = true;
+    },
     update:function(options) {
+        if (this.skipNextUpdate) {
+            this.skipNextUpdate = false;
+            return;
+        }
         options = _.extend({}, options);
         if (!this.model) {
             return;
@@ -274,14 +251,14 @@ var CollectionBinding = Binding.extend({
             for (var i=splice.index; i<splice.index+splice.addedCount; i++) {
                 var itemBinding = _.isFunction(this.itemBinding)?this.itemBinding(this.model[i]):this.itemBinding;
                 bindingsAdded.push(itemBinding
-                    .extend({
-                        inject:this.itemMixins.inject,
-                        injectionKey:this.itemInjectionKey
-                    })
-                    .initialize({
-                        model:this.model[i],
-                        $context:this.$el
-                    })
+                        .extend({
+                            inject:this.itemMixins.inject,
+                            injectionKey:this.itemInjectionKey
+                        })
+                        .initialize({
+                            model:this.model[i],
+                            $context:this.$el
+                        })
                 );
             }
             var args = [splice.index, splice.removed].concat(bindingsAdded);
@@ -333,12 +310,36 @@ var CollectionBinding = Binding.extend({
 });
 
 var ObjectBinding = Binding.extend({
+    parseBindingKey:function(key) {
+        var parts = key.split(":");
+        var modelPath;
+        var viewKey;
+        if (parts.length===1) {
+            modelPath = parts[0];
+        }
+        else if (parts.length===2) {
+            modelPath = parts[0];
+            viewKey = parts[1];
+        }
+        return {
+            modelPath:modelPath,
+            viewKey:viewKey
+        }
+    },
     initialize:function(options) {
-        options = _.extend({}, options);
+        options = extend(true, {}, options);
         Binding.initialize.call(this, options);
         this.bindings = {};
+        this.observers.children = {};
+        this.observers.self = {};
         this.setModel(options.model);
         return this;
+    },
+    getRenderModel:function() {
+        return this.get("");
+    },
+    getRenderMetadata:function() {
+        return this.meta("");
     },
     setModel:function(model) {
         if (this.model===model) {
@@ -350,11 +351,11 @@ var ObjectBinding = Binding.extend({
         this.model = model;
         if (this.model) {
             this.attachObservers();
-            for (var modelKey in this.bindings) {
-                var model = this.get(modelKey);
+            for (var modelPath in this.bindings) {
+                var model = this.get(modelPath);
                 if (model) {
-                    for (var viewKey in this.bindings[modelKey]) {
-                        this.bindings[modelKey][viewKey].setModel(model);
+                    for (var viewKey in this.bindings[modelPath]) {
+                        this.bindings[modelPath][viewKey].setModel(model);
                     }
                 }
             }
@@ -363,9 +364,10 @@ var ObjectBinding = Binding.extend({
         return this;
     },
     addBinding:function(options) {
-        options = _.extend(
+        options = extend(
+            true,
             {
-                modelKey:""
+                modelPath:""
             },
             options
         );
@@ -373,14 +375,14 @@ var ObjectBinding = Binding.extend({
             options.binding.injectionKey = options.viewKey;
         }
         else {
-            options.binding.injectionKey = options.modelKey;
+            options.binding.injectionKey = options.modelPath;
         }
 
-        if (!(options.modelKey in this.bindings)) {
-            this.bindings[options.modelKey] = {};
+        if (!(options.modelPath in this.bindings)) {
+            this.bindings[options.modelPath] = {};
         }
-        if (options.viewKey in this.bindings[options.modelKey]) {
-            var currentBinding = this.bindings[options.modelKey][options.viewKey];
+        if (options.viewKey in this.bindings[options.modelPath]) {
+            var currentBinding = this.bindings[options.modelPath][options.viewKey];
             if (currentBinding===options.binding) {
                 return;
             }
@@ -389,12 +391,15 @@ var ObjectBinding = Binding.extend({
             }
         }
         options.binding.setContext(this.$el);
-        this.bindings[options.modelKey][options.viewKey] = options.binding;
+        this.bindings[options.modelPath][options.viewKey] = options.binding;
         if (!options.binding.model&&this.model) {
-            options.binding.setModel(this.get(options.modelKey));
+            options.binding.setModel(this.get(options.modelPath));
         }
         else {
             options.binding.update();
+        }
+        if (options.modelPath!=="") {
+            this.attachObserver(options.modelPath);
         }
         return this;
     },
@@ -403,169 +408,123 @@ var ObjectBinding = Binding.extend({
             var binding = bindings[key];
             var keyParse = binding.parseBindingKey(key);
             this.addBinding({
-                modelKey:keyParse.modelKey,
+                modelPath:keyParse.modelPath,
                 viewKey:keyParse.viewKey,
                 binding:binding.new(keyParse.options)
             });
         }
         return this;
     },
-    observe:function(added, removed, changed, getOldValueFn) {
-        var renderSelf = false;
-        for (var modelKey in added) {
-            var value = added[modelKey];
-            if (modelKey in this.bindings) {
-                for (var viewKey in this.bindings[modelKey]) {
-                    this.bindings[modelKey][viewKey].setModel(value);
-                }
-            }
-            else {
-                renderSelf = true;
-            }
-        }
-        for (var modelKey in changed) {
-            var value = changed[modelKey];
-            if (modelKey in this.bindings) {
-                for (var viewKey in this.bindings[modelKey]) {
-                    this.bindings[modelKey][viewKey].setModel(value);
-                }
-            }
-            else {
-                renderSelf = true;
-            }
-        }
-        for (var modelKey in removed) {
-            if (modelKey in this.bindings) {
-                for (var viewKey in this.bindings[modelKey]) {
-                    this.bindings[modelKey][viewKey].setModel();
-                }
-            }
-            else {
-                renderSelf = true;
-            }
-        }
-        if (renderSelf) {
-            this.update();
+    attachObserver:function(modelPath) {
+        this.detachObserver(modelPath);
+        var pathObserver = new Observe.PathObserver(this.model, modelPath);
+        pathObserver.open(this.buildChildObserver({
+            modelPath:modelPath
+        }));
+        this.observers.children[modelPath] = pathObserver;
+    },
+    attachObservers:function() {
+        for (var modelPath in this.bindings) {
+            this.attachObserver(modelPath);
         }
     },
-    /*
-    TODO
-    Still doesn't handle case where another object binding is added at a deep model key and is changed/added/removed, since
-    the ObjectObserver only observes direct properties of this.model
-    */
-    attachObservers:function() {
-        var propertyObserver = new Observe.ObjectObserver(this.model);
-        propertyObserver.open(this.observe.bind(this));
-        this.observers[""] = propertyObserver;
-        return this;
+    detachObserver:function(modelPath) {
+        if (modelPath in this.observers) {
+            this.observers[modelPath].close();
+            delete this.observers[modelPath];
+        }
     },
     detachObservers:function() {
-        this.observers[""].close();
-        delete this.observers[""];
-        return this;
+        for (var modelPath in this.observers) {
+            this.detachObserver(modelPath);
+        }
+    },
+    buildChildObserver:function(options) {
+        var modelPath = options.modelPath;
+        return function(newValue, oldValue) {
+            for (var viewKey in this.bindings[modelPath]) {
+                this.bindings[modelPath][viewKey].setModel(newValue);
+            }
+        }.bind(this);
     },
     render:function() {
         var $newEl = $(this.template(this.getRenderModel(), this.getRenderMetadata()));
-        for (var modelKey in this.bindings) {
-            for (var viewKey in this.bindings[modelKey]) {
-                var binding = this.bindings[modelKey][viewKey];
+        for (var modelPath in this.bindings) {
+            for (var viewKey in this.bindings[modelPath]) {
+                var binding = this.bindings[modelPath][viewKey];
                 binding.setContext($newEl);
-                //console.log("Protoblock:ObjectBinding:render:render, viewKey:"+viewKey+", modelKey:"+modelKey);
                 binding.inject();
             }
         }
         $newEl.attr("inject", this.injectionKey);
         return $newEl;
-    },
-    destroy:function() {
-        Binding.destroy.call(this);
-        for (var modelKey in this.bindings) {
-            for (var viewKey in this.bindings[modelKey]) {
-                var binding = this.bindings[modelKey][viewKey];
-                binding.destroy();
-            }
-        }
-        delete this.model;
     }
 });
 
-var PathBinding = Binding.extend({
-    parseBindingKey:function(key) {
+var PathBinding = ObjectBinding.extend({
+    parseBindingKey: function (key) {
         var parts = key.split(":");
-        var modelKey;
+        var modelPath;
         var viewKey;
         var path;
-        if (parts.length===1) {
-            modelKey = "";
+        if (parts.length === 1) {
+            modelPath = "";
             path = parts[0];
             viewKey = parts[0];
         }
-        else if (parts.length===2) {
-            modelKey = parts[0];
+        else if (parts.length === 2) {
+            modelPath = parts[0];
             path = parts[1];
-            viewKey = parts[0]+"."+parts[1];
+            viewKey = parts[0] + "." + parts[1];
         }
-        else if (parts.length===3) {
-            modelKey = parts[0];
+        else if (parts.length === 3) {
+            modelPath = parts[0];
             viewKey = parts[1];
             path = parts[2];
         }
         return {
-            modelKey:modelKey,
-            viewKey:viewKey,
-            options:{
-                path:path
+            modelPath: modelPath,
+            viewKey: viewKey,
+            options: {
+                path: path
             }
         };
     },
     initialize:function(options) {
-        options = _.extend({}, options);
-        Binding.initialize.call(this, options);
-        this.bindings = {};
+        options = extend(true, {}, options);
         this.path = options.path;
-        this.setModel(options.model);
+        ObjectBinding.initialize.call(this, options);
         return this;
+    },
+    attachObservers:function() {
+        ObjectBinding.attachObservers.call(this);
+        var pathObserver = new Observe.PathObserver(this.model, this.path);
+        pathObserver.open(this.buildSelfObserver({
+            path:this.path
+        }));
+        this.observers.self[this.path] = pathObserver;
+        return this;
+    },
+    detachObservers:function() {
+        ObjectBinding.detachObservers.call(this);
+        this.observers.self[this.path].close();
+        delete this.observers.self[this.path];
+        return this;
+    },
+    buildSelfObserver:function(options) {
+        return function(newValue, oldValue) {
+            this.update();
+        }.bind(this);
     },
     getRenderModel:function() {
         return this.get(this.path);
     },
     getRenderMetadata:function() {
         return this.meta(this.path);
-    },
-    setModel:function(model) {
-        if (this.model===model) {
-            return;
-        }
-        this.model = model;
-        if (this.model) {
-            this.attachObservers();
-        }
-        this.update();
-        return this;
-    },
-    attachObservers:function() {
-        var pathObserver = new Observe.PathObserver(this.model, this.path);
-        pathObserver.open(this.observe.bind(this));
-        this.observers[this.path] = pathObserver;
-        return this;
-    },
-    detachObservers:function() {
-        this.observers[this.path].close();
-        delete this.observers[this.path];
-        return this;
-    },
-    observe:function(newValue, oldValue) {
-        this.update();
-    },
-    render:function() {
-        var $newEl = $(this.template(this.getRenderModel(), this.getRenderMetadata()));
-        $newEl.attr("inject", this.injectionKey);
-        return $newEl;
     }
 });
 
 module.exports = {
-    setEventEmitter:setEventEmitter,
     Binding:Binding,
     PathBinding:PathBinding,
     ObjectBinding:ObjectBinding,
