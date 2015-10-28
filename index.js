@@ -20,7 +20,8 @@ var Binding = Object.extend({
         return observePath.replace(this.arrayPathPattern, ".");
     },
     initialize:function(options) {
-        _.extend(
+        extend(
+            true,
             this,
             _.pick(options?options:{}, "injectionKey", "metaKey")
         )
@@ -106,7 +107,7 @@ var Binding = Object.extend({
         return value.replace(/\./g, "\\.");
     },
     inject:function(options) {
-        options = _.extend({}, options);
+        options = extend(true, {}, options);
         var $injectEl;
         if (!this.$context) {
             return;
@@ -141,7 +142,7 @@ var Binding = Object.extend({
             this.skipNextUpdate = false;
             return;
         }
-        options = _.extend({}, options);
+        options = extend(true, {}, options);
         if (!this.model) {
             return;
         }
@@ -171,7 +172,7 @@ var CollectionBinding = Binding.extend({
     itemBinding:undefined,
     itemMixins:{
         inject:function(options) {
-            options = _.extend({}, options);
+            options = extend(true, {}, options);
             var $injectEl;
             if (!this.$context) {
                 return;
@@ -199,7 +200,7 @@ var CollectionBinding = Binding.extend({
         }
     },
     initialize:function(options) {
-        options = _.extend({}, options);
+        options = extend(true, {}, options);
         Binding.initialize.call(this, options);
         this.itemInjectionKey = this.itemViewKey;
         this.bindings = [];
