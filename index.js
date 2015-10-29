@@ -13,11 +13,20 @@ var extend = require("node.extend");
 
 var Binding = Object.extend({
     metaKey:"_m",
+    validationFlag:"valid.state",
+    validationMessage:"valid.message",
     template:undefined,
     arrayPathPattern:/[\[\]]]/g,
     objectPathDelimiterPattern:/\./g,
-    toObjectPath:function(observePath) {
-        return observePath.replace(this.arrayPathPattern, ".");
+    backPathPattern:/[^.]+\.\.\.\./g,
+    normalizePath:function(observePath) {
+        var objectPath = observePath.replace(this.arrayPathPattern, ".");
+        var length = 0;
+        while (length!==objectPath.length) {
+            length = objectPath.length;
+            objectPath = objectPath.replace(this.backPathPattern, "");
+        }
+        return objectPath;
     },
     initialize:function(options) {
         extend(
@@ -44,6 +53,20 @@ var Binding = Object.extend({
     getRenderMetadata:function() {
         return this.meta("");
     },
+    buildPath:function(parts) {
+        return this.normalizePath(parts.join("."));
+    },
+    buildMetadataPath:function(path) {
+        var normalizedPath = this.normalizePath(path);
+        var parts = normalizedPath.split(this.objectPathDelimiterPattern);
+        var metadataPath = this.buildPath([
+            normalizedPath,
+            "..",
+            this.metaKey,
+            _.last(parts)
+        ]);
+        return metadataPath;
+    },
     meta:function(path) {
         if (!path) {
             return {};
@@ -52,17 +75,8 @@ var Binding = Object.extend({
             return path[this.metaKey]||{};
         }
         else if (_.isString(path)) {
-            var target = this.model;
-            var objectPath = this.toObjectPath(path);
-            var parts = objectPath.split(this.objectPathDelimiterPattern);
-            var pathToParent = parts.slice(0, -1);
-            var parent = ObjectPath.get(target, pathToParent);
-            if (parent&&parent[this.metaKey]) {
-                return parent[this.metaKey][_.last(parts)]||{};
-            }
-            else {
-                return {};
-            }
+            var metadataPath = this.buildMetadataPath(path);
+            return ObjectPath.get(this.model, metadataPath)||{};
         }
     },
     set:function(path, value, root) {
@@ -500,19 +514,32 @@ var PathBinding = ObjectBinding.extend({
     attachObservers:function() {
         ObjectBinding.attachObservers.call(this);
         var pathObserver = new Observe.PathObserver(this.model, this.path);
-        pathObserver.open(this.buildSelfObserver({
-            path:this.path
-        }));
+        pathObserver.open(this.buildUpdateObserver());
         this.observers.self[this.path] = pathObserver;
+        var metadataPath = this.buildMetadataPath(this.path);
+        var errorPath = this.buildPath([
+            metadataPath,
+            this.validationFlag
+        ])
+        var errorObserver = new Observe.PathObserver(this.model, errorPath);
+        errorObserver.open(this.buildUpdateObserver());
+        this.observers.self[errorPath] = errorObserver;
         return this;
     },
     detachObservers:function() {
         ObjectBinding.detachObservers.call(this);
         this.observers.self[this.path].close();
         delete this.observers.self[this.path];
+        var metadataPath = this.buildMetadataPath(this.path);
+        var errorPath = this.buildPath([
+            metadataPath,
+            this.validationFlag
+        ])
+        this.observers.self[errorPath].close();
+        delete this.observers.self[errorPath];
         return this;
     },
-    buildSelfObserver:function(options) {
+    buildUpdateObserver:function(options) {
         return function(newValue, oldValue) {
             this.update();
         }.bind(this);
