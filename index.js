@@ -11,20 +11,30 @@ var ObjectPath = require("object-path");
 var Observe = require("observe-js");
 var extend = require("node.extend");
 
-var Binding = Object.extend({
+var arrayPathPattern = /[\[\]]]/g;
+var objectPathDelimiterPattern = /\./g;
+var backPathPattern = /[^.]+\.\.\.\./g;
+
+
+var config = {
     metaKey:"_m",
-    validationFlag:"valid.state",
-    validationMessage:"valid.message",
+    validationKey:"valid",
+    validationStateKey:"state",
+    validationMessageKey:"message"
+}
+
+function configure (options) {
+    extend(true, config, options);
+}
+
+var Binding = Object.extend({
     template:undefined,
-    arrayPathPattern:/[\[\]]]/g,
-    objectPathDelimiterPattern:/\./g,
-    backPathPattern:/[^.]+\.\.\.\./g,
     normalizePath:function(observePath) {
-        var objectPath = observePath.replace(this.arrayPathPattern, ".");
+        var objectPath = observePath.replace(arrayPathPattern, ".");
         var length = 0;
         while (length!==objectPath.length) {
             length = objectPath.length;
-            objectPath = objectPath.replace(this.backPathPattern, "");
+            objectPath = objectPath.replace(backPathPattern, "");
         }
         return objectPath;
     },
@@ -58,11 +68,11 @@ var Binding = Object.extend({
     },
     buildMetadataPath:function(path) {
         var normalizedPath = this.normalizePath(path);
-        var parts = normalizedPath.split(this.objectPathDelimiterPattern);
+        var parts = normalizedPath.split(objectPathDelimiterPattern);
         var metadataPath = this.buildPath([
             normalizedPath,
             "..",
-            this.metaKey,
+            config.metaKey,
             _.last(parts)
         ]);
         return metadataPath;
@@ -72,7 +82,7 @@ var Binding = Object.extend({
             return {};
         }
         else if (_.isObject(path)) {
-            return path[this.metaKey]||{};
+            return path[config.metaKey]||{};
         }
         else if (_.isString(path)) {
             var metadataPath = this.buildMetadataPath(path);
@@ -519,7 +529,7 @@ var PathBinding = ObjectBinding.extend({
         var metadataPath = this.buildMetadataPath(this.path);
         var errorPath = this.buildPath([
             metadataPath,
-            this.validationFlag
+            config.validationFlag
         ])
         var errorObserver = new Observe.PathObserver(this.model, errorPath);
         errorObserver.open(this.buildUpdateObserver());
@@ -533,7 +543,7 @@ var PathBinding = ObjectBinding.extend({
         var metadataPath = this.buildMetadataPath(this.path);
         var errorPath = this.buildPath([
             metadataPath,
-            this.validationFlag
+            config.validationFlag
         ])
         this.observers.self[errorPath].close();
         delete this.observers.self[errorPath];
@@ -553,6 +563,7 @@ var PathBinding = ObjectBinding.extend({
 });
 
 module.exports = {
+    configure:configure,
     Binding:Binding,
     PathBinding:PathBinding,
     ObjectBinding:ObjectBinding,
