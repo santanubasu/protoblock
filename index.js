@@ -351,8 +351,6 @@ var ObjectBinding = Binding.extend({
         options = extend(true, {}, options);
         Binding.initialize.call(this, options);
         this.bindings = {};
-        this.observers.children = {};
-        this.observers.self = {};
         this.setModel(options.model);
         return this;
     },
@@ -442,8 +440,9 @@ var ObjectBinding = Binding.extend({
         pathObserver.open(this.buildChildObserver({
             modelPath:modelPath
         }));
-        this.observers.children[modelPath] = pathObserver;
+        this.observers[modelPath] = pathObserver;
     },
+    // TODO attach self observer, which would be at path "", to deal with things like version mismatch on entity
     attachObservers:function() {
         for (var modelPath in this.bindings) {
             this.attachObserver(modelPath);
@@ -534,24 +533,28 @@ var PathBinding = ObjectBinding.extend({
 
         var pathObserver = new Observe.PathObserver(this.model, this.path);
         pathObserver.open(this.buildUpdateObserver());
-        this.observers.self[this.path] = pathObserver;
+        this.observers[this.path] = pathObserver;
 
         var validationStatePath = this.buildValidationStatePath(this.path);
         var validationObserver = new Observe.PathObserver(this.model, validationStatePath);
         validationObserver.open(this.buildUpdateObserver());
-        this.observers.self[validationStatePath] = validationObserver;
+        this.observers[validationStatePath] = validationObserver;
 
         return this;
     },
     detachObservers:function() {
         ObjectBinding.detachObservers.call(this);
 
-        this.observers.self[this.path].close();
-        delete this.observers.self[this.path];
+        if (this.path in this.observers) {
+            this.observers[this.path].close();
+            delete this.observers[this.path];
+        }
 
         var validationStatePath = this.buildValidationStatePath(this.path);
-        this.observers.self[validationStatePath].close();
-        delete this.observers.self[validationStatePath];
+        if (validationStatePath in this.observers) {
+            this.observers[validationStatePath].close();
+            delete this.observers[validationStatePath];
+        }
 
         return this;
     },
