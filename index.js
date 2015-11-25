@@ -351,6 +351,8 @@ var ObjectBinding = Binding.extend({
         options = extend(true, {}, options);
         Binding.initialize.call(this, options);
         this.bindings = {};
+        this.observers.children = {};
+        this.observers.self = {};
         this.setModel(options.model);
         return this;
     },
@@ -440,7 +442,7 @@ var ObjectBinding = Binding.extend({
         pathObserver.open(this.buildChildObserver({
             modelPath:modelPath
         }));
-        this.observers[modelPath] = pathObserver;
+        this.observers.children[modelPath] = pathObserver;
     },
     // TODO attach self observer, which would be at path "", to deal with things like version mismatch on entity
     attachObservers:function() {
@@ -449,13 +451,13 @@ var ObjectBinding = Binding.extend({
         }
     },
     detachObserver:function(modelPath) {
-        if (modelPath in this.observers) {
-            this.observers[modelPath].close();
-            delete this.observers[modelPath];
+        if (modelPath in this.observers.children) {
+            this.observers.children[modelPath].close();
+            delete this.observers.children[modelPath];
         }
     },
     detachObservers:function() {
-        for (var modelPath in this.observers) {
+        for (var modelPath in this.observers.children) {
             this.detachObserver(modelPath);
         }
     },
@@ -533,27 +535,27 @@ var PathBinding = ObjectBinding.extend({
 
         var pathObserver = new Observe.PathObserver(this.model, this.path);
         pathObserver.open(this.buildUpdateObserver());
-        this.observers[this.path] = pathObserver;
+        this.observers.self[this.path] = pathObserver;
 
         var validationStatePath = this.buildValidationStatePath(this.path);
         var validationObserver = new Observe.PathObserver(this.model, validationStatePath);
         validationObserver.open(this.buildUpdateObserver());
-        this.observers[validationStatePath] = validationObserver;
+        this.observers.self[validationStatePath] = validationObserver;
 
         return this;
     },
     detachObservers:function() {
         ObjectBinding.detachObservers.call(this);
 
-        if (this.path in this.observers) {
-            this.observers[this.path].close();
-            delete this.observers[this.path];
+        if (this.path in this.observers.self) {
+            this.observers.self[this.path].close();
+            delete this.observers.self[this.path];
         }
 
         var validationStatePath = this.buildValidationStatePath(this.path);
-        if (validationStatePath in this.observers) {
-            this.observers[validationStatePath].close();
-            delete this.observers[validationStatePath];
+        if (validationStatePath in this.observers.self) {
+            this.observers.self[validationStatePath].close();
+            delete this.observers.self[validationStatePath];
         }
 
         return this;
