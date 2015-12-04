@@ -108,20 +108,24 @@ var Binding = Object.extend({
             return;
         }
         this.$context = $context;
-        this.detachEventListeners();
+        if (this.$el) {
+            this.attachEventListeners();
+        }
         return this;
     },
     attachEventListeners:function() {
-        return this;
+        this.detachEventListeners();
     },
     detachEventListeners:function() {
-        return this;
     },
     preRender:function() {
         return this;
     },
     render:function() {
         return $();
+    },
+    postRender:function() {
+        return this;
     },
     escapeSelectorValue:function(value) {
         return value.replace(/\./g, "\\.");
@@ -180,9 +184,6 @@ var Binding = Object.extend({
 
         this.attachEventListeners();
 
-        return this;
-    },
-    postRender:function() {
         return this;
     }
 });
@@ -465,6 +466,7 @@ var ObjectBinding = Binding.extend({
         var modelPath = options.modelPath;
         return function(newValue, oldValue) {
             for (var viewKey in this.bindings[modelPath]) {
+                console.log("ObjectBinding child observer is setting model at "+modelPath+"."+viewKey);
                 this.bindings[modelPath][viewKey].setModel(newValue);
             }
         }.bind(this);
