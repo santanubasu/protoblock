@@ -116,6 +116,9 @@ var Binding = Object.extend({
     attachEventListeners:function() {
         this.detachEventListeners();
     },
+    attachAllEventListeners:function() {
+        this.attachEventListeners();
+    },
     detachEventListeners:function() {
     },
     preRender:function() {
@@ -146,7 +149,7 @@ var Binding = Object.extend({
             return;
         }
         var $targetEl;
-        //console.log("Protoblock:ObjectBinding:render:inject, injectionKey:"+this.injectionKey);
+
         if (this.injectionKey) {
             var escapedInjectionKey = this.escapeSelectorValue(this.injectionKey);
             $targetEl = this.$context.find("[inject="+escapedInjectionKey+"]").not(this.$context.find("[inject] [inject="+escapedInjectionKey+"]"));
@@ -182,8 +185,9 @@ var Binding = Object.extend({
             $currentEl.remove();
         }
 
-        this.attachEventListeners();
-
+        if ($.contains(document, this.$el[0])) {
+            this.attachAllEventListeners();
+        }
         return this;
     }
 });
@@ -328,6 +332,12 @@ var CollectionBinding = Binding.extend({
     bindingsRemoved:function(index, bindings) {
     },
     bindingsSpliced:function(index, added, removed) {
+    },
+    attachAllEventListeners:function() {
+        this.attachEventListeners();
+        this.bindings.forEach(function(binding) {
+            binding.attachAllEventListeners();
+        })
     }
 });
 
@@ -482,6 +492,14 @@ var ObjectBinding = Binding.extend({
         }
         $newEl.attr("inject", this.injectionKey);
         return $newEl;
+    },
+    attachAllEventListeners:function() {
+        this.attachEventListeners();
+        for (var modelPath in this.bindings) {
+            for (var viewKey in this.bindings[modelPath]) {
+                this.bindings[modelPath][viewKey].attachAllEventListeners();
+            }
+        }
     }
 });
 
