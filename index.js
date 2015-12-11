@@ -364,6 +364,7 @@ var ObjectBinding = Binding.extend({
         this.bindings = {};
         this.observers.children = {};
         this.observers.self = {};
+        this.observedPaths = {};
         this.setModel(options.model);
         return this;
     },
@@ -431,9 +432,16 @@ var ObjectBinding = Binding.extend({
             options.binding.update();
         }
         if (options.modelPath!=="") {
-            this.attachObserver(options.modelPath);
+            this.attachChildObserver(options.modelPath);
         }
         return this;
+    },
+    addObservedPaths:function() {
+        var args = Array.prototype.slice.call(arguments);
+        args.forEach(function(observedPath) {
+            this.observedPaths[observedPath] = true;
+            this.attachSelfObserver(observedPath)
+        }.bind(this))
     },
     addBindings:function(bindings) {
         for (var key in bindings) {
@@ -447,29 +455,50 @@ var ObjectBinding = Binding.extend({
         }
         return this;
     },
-    attachObserver:function(modelPath) {
-        this.detachObserver(modelPath);
+    attachChildObserver:function(modelPath) {
+        this.detachChildObserver(modelPath);
         var pathObserver = new Observe.PathObserver(this.model, modelPath);
         pathObserver.open(this.buildChildObserver({
             modelPath:modelPath
         }));
         this.observers.children[modelPath] = pathObserver;
     },
-    // TODO attach self observer, which would be at path "", to deal with things like version mismatch on entity
+    attachSelfObserver:function(modelPath) {
+        this.detachSelfObserver(modelPath);
+        var pathObserver = new Observe.PathObserver(this.model, modelPath);
+        pathObserver.open(this.buildSelfObserver({
+            modelPath:modelPath
+        }));
+        this.observers.self[modelPath] = pathObserver;
+    },
     attachObservers:function() {
         for (var modelPath in this.bindings) {
-            this.attachObserver(modelPath);
+            for (var viewPath in this.bindings[modelPath]) {
+                this.attachChildObserver(modelPath);
+            }
+        }
+        for (var observedPath in this.observedPaths) {
+            this.attachSelfObserver(observedPath);
         }
     },
-    detachObserver:function(modelPath) {
+    detachChildObserver:function(modelPath) {
         if (modelPath in this.observers.children) {
             this.observers.children[modelPath].close();
             delete this.observers.children[modelPath];
         }
     },
+    detachSelfObserver:function(modelPath) {
+        if (modelPath in this.observers.self) {
+            this.observers.self[modelPath].close();
+            delete this.observers.self[modelPath];
+        }
+    },
     detachObservers:function() {
         for (var modelPath in this.observers.children) {
-            this.detachObserver(modelPath);
+            this.detachChildObserver(modelPath);
+        }
+        for (var observedPath in this.observers.self) {
+            this.detachSelfObserver(observedPath);
         }
     },
     buildChildObserver:function(options) {
@@ -479,6 +508,12 @@ var ObjectBinding = Binding.extend({
                 console.log("ObjectBinding child observer is setting model at "+modelPath+"."+viewKey);
                 this.bindings[modelPath][viewKey].setModel(newValue);
             }
+        }.bind(this);
+    },
+    buildSelfObserver:function(options) {
+        var modelPath = options.modelPath;
+        return function(newValue, oldValue) {
+            this.update();
         }.bind(this);
     },
     render:function() {
