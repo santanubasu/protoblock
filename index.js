@@ -529,7 +529,9 @@ var ObjectBinding = Binding.extend({
         return $newEl;
     },
     attachAllEventListeners:function() {
-        this.attachEventListeners();
+        if (this.$el) {
+            this.attachEventListeners();
+        }
         for (var modelPath in this.bindings) {
             for (var viewKey in this.bindings[modelPath]) {
                 this.bindings[modelPath][viewKey].attachAllEventListeners();
