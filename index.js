@@ -5,7 +5,7 @@ if (!(typeof $ === "function")) {
     global.$ = global.jQuery = require("jquery");
 }
 
-require("node-polyfill")
+require("node-polyfill");
 
 var ObjectPath = require("object-path");
 var Observe = require("observe-js");
