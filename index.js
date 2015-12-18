@@ -224,6 +224,22 @@ var CollectionBinding = Binding.extend({
             }
         }
     },
+    parseBindingKey:function(key) {
+        var parts = key.split(":");
+        var modelPath;
+        var viewKey;
+        if (parts.length===1) {
+            modelPath = parts[0];
+        }
+        else if (parts.length===2) {
+            modelPath = parts[0];
+            viewKey = parts[1];
+        }
+        return {
+            modelPath:modelPath,
+            viewKey:viewKey
+        }
+    },
     initialize:function(options) {
         options = extend(true, {}, options);
         Binding.initialize.call(this, options);
