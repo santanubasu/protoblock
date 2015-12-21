@@ -375,7 +375,7 @@ var ObjectBinding = Binding.extend({
         }
     },
     initialize:function(options) {
-        options = extend(true, {}, options);
+        options = options||{};
         Binding.initialize.call(this, options);
         this.bindings = {};
         this.observers.children = {};
@@ -590,8 +590,14 @@ var PathBinding = ObjectBinding.extend({
         };
     },
     initialize:function(options) {
-        options = extend(true, {}, options);
-        this.path = options.path;
+        options = options||{};
+        /*
+        TODO
+        This is an attempt to allow a type specified value for path to remain in effect even when the options does not
+        contain a path property.  This technique is probbaly something that should be generalized and used for any properties
+        that can be set across all instances of a type, and can be done so at the type definition stage
+         */
+        this.path = options.path?options.path:this.path;
         ObjectBinding.initialize.call(this, options);
         return this;
     },
