@@ -128,7 +128,10 @@ var Binding = Object.extend({
         return $();
     },
     postRender:function() {
+        this.renderDirect();
         return this;
+    },
+    renderDirect:function(options) {
     },
     escapeSelectorValue:function(value) {
         return value.replace(/\./g, "\\.");
