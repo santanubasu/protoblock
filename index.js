@@ -60,7 +60,18 @@ var Binding = Object.extend({
         return this.meta("");
     },
     buildPath:function(parts) {
-        return this.normalizePath(parts.join("."));
+        if (_.isArray(parts)) {
+            return this.normalizePath(parts.join("."));
+        }
+        else {
+            var args = Array.prototype.slice.call(arguments);
+            return this.normalizePath(args
+                .filter(function(part) {
+                    return part.length>0;
+                })
+                .join(".")
+            );
+        }
     },
     buildMetadataPath:function(path) {
         var normalizedPath = this.normalizePath(path);
