@@ -592,8 +592,8 @@ var PathBinding = ObjectBinding.extend({
         }
         else if (parts.length === 3) {
             modelPath = parts[0];
-            viewKey = parts[1];
-            path = parts[2];
+            path = parts[1];
+            viewKey = parts[2];
         }
         return {
             modelPath: modelPath,
