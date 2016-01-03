@@ -372,6 +372,7 @@ var CollectionBinding = Binding.extend({
 });
 
 var ObjectBinding = Binding.extend({
+    observedPaths:{},
     parseBindingKey:function(key) {
         var parts = key.split(":");
         var modelPath;
@@ -394,7 +395,6 @@ var ObjectBinding = Binding.extend({
         this.bindings = {};
         this.observers.children = {};
         this.observers.self = {};
-        this.observedPaths = {};
         this.setModel(options.model);
         return this;
     },
@@ -465,13 +465,6 @@ var ObjectBinding = Binding.extend({
             this.attachChildObserver(options.modelPath);
         }
         return this;
-    },
-    addObservedPaths:function() {
-        var args = Array.prototype.slice.call(arguments);
-        args.forEach(function(observedPath) {
-            this.observedPaths[observedPath] = true;
-            this.attachSelfObserver(observedPath)
-        }.bind(this))
     },
     addBindings:function(bindings) {
         for (var key in bindings) {
