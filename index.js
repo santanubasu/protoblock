@@ -171,6 +171,7 @@ var Binding = Object.extend({
         else {
             $targetEl = this.$el;
         }
+        $injectEl.attr("inject", this.injectionKey);
         if ($targetEl&&!$injectEl.is($targetEl)) {
             $targetEl.replaceWith($injectEl);
         }
