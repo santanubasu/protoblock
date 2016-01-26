@@ -344,10 +344,12 @@ var CollectionBinding = Binding.extend({
             .map(function () {
                 return this.toArray();
             });
-        var escapedItemInjectionKey = this.escapeSelectorValue(this.itemInjectionKey);
-        $newEl.find("[inject="+escapedItemInjectionKey+"]").replaceWith($itemsEl);
-        for (var i=0; i<this.bindings.length; i++) {
-            this.bindings[i].setContext($newEl);
+        if ($itemsEl.length>0) {
+            var escapedItemInjectionKey = this.escapeSelectorValue(this.itemInjectionKey);
+            $newEl.find("[inject="+escapedItemInjectionKey+"]").replaceWith($itemsEl);
+            for (var i=0; i<this.bindings.length; i++) {
+                this.bindings[i].setContext($newEl);
+            }
         }
         $newEl.attr("inject", this.injectionKey);
         return $newEl;
