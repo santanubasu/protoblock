@@ -45,9 +45,9 @@ var Binding = Object.extend({
         return this;
     },
     destroy:function() {
-        this.detachEventListeners();
         this.detachObservers();
         if (this.$el) {
+            this.detachEventListeners();
             this.$el.remove();
         }
         delete this.$context;
