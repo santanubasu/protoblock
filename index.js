@@ -489,10 +489,10 @@ var ObjectBinding = Binding.extend({
         }));
         this.observers.children[modelPath] = pathObserver;
     },
-    attachSelfObserver:function(modelPath) {
+    attachSelfObserver:function(modelPath, fn) {
         this.detachSelfObserver(modelPath);
         var pathObserver = new Observe.PathObserver(this.model, modelPath);
-        pathObserver.open(this.buildSelfObserver({
+        pathObserver.open(_.isFunction(fn)?fn.bind(this):this.buildSelfObserver({
             modelPath:modelPath
         }));
         this.observers.self[modelPath] = pathObserver;
@@ -504,7 +504,7 @@ var ObjectBinding = Binding.extend({
             }
         }
         for (var observedPath in this.observedPaths) {
-            this.attachSelfObserver(observedPath);
+            this.attachSelfObserver(observedPath, this.observedPaths[observedPath]);
         }
     },
     detachChildObserver:function(modelPath) {
@@ -618,6 +618,20 @@ var PathBinding = ObjectBinding.extend({
             "valid.state"
         ])
         return validationStatePath;
+    },
+    getPathFromModel:function(path) {
+        return this.normalizePath([
+            this.path,
+            path
+        ].join("."));
+    },
+    attachSelfObserver:function(modelPath) {
+        var fullPath = this.getPathFromModel(modelPath);
+        ObjectBinding.attachSelfObserver.call(this, fullPath);
+    },
+    detachSelfObserver:function(modelPath) {
+        var fullPath = this.getPathFromModel(modelPath);
+        ObjectBinding.detachSelfObserver.call(this, fullPath);
     },
     attachObservers:function() {
         ObjectBinding.attachObservers.call(this);
