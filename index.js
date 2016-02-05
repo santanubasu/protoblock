@@ -637,10 +637,15 @@ var PathBinding = ObjectBinding.extend({
         return validationStatePath;
     },
     getPathFromModel:function(path) {
-        return this.normalizePath([
-            this.path,
-            path
-        ].join("."));
+        if (path[0]==='.') {
+            return this.normalizePath([
+                this.path,
+                path
+            ].join("."));
+        }
+        else {
+            return path;
+        }
     },
     attachSelfObserver:function(modelPath) {
         var fullPath = this.getPathFromModel(modelPath);
