@@ -16,7 +16,8 @@ var objectPathDelimiterPattern = /\./g;
 var backPathPattern = /[^.]+\.\.\.\./g;
 
 var syntax = {
-    metaKey:"_m"
+    metaKey:"_m",
+    transientKey:"_t"
 }
 
 function initialize(options) {
@@ -184,7 +185,13 @@ var Binding = Object.extend({
             this.skipNextUpdate = false;
             return;
         }
-        options = extend(true, {}, options);
+        options = extend(
+            true,
+            {
+                attachEvents:true
+            },
+            options
+        );
         if (!this.model) {
             return;
         }
@@ -200,7 +207,7 @@ var Binding = Object.extend({
             $currentEl.remove();
         }
 
-        if ($.contains(document, this.$el[0])) {
+        if (options.attachEvents&&$.contains(document, this.$el[0])) {
             this.attachAllEventListeners();
         }
         return this;
@@ -294,35 +301,51 @@ var CollectionBinding = Binding.extend({
         this.update();
         return this;
     },
+    // TODO AS written, this will only work correctly for collections that contain row which are objects that are
+    // referentially unique,
     observe:function(splices) {
-        splices.forEach(function(splice) {
+        this.bindings.forEach(function(binding, index) {
+            binding.model[syntax.transientKey] = {
+                binding:binding,
+                index:index
+            };
+        });
+        var newBindings = [];
+        var bindings = [];
+        bindings.length = this.model.length;
+        this.model.forEach(function(itemModel, index) {
             var binding;
-            var bindingsRemoved = [];
-            for (var i=splice.index; i<splice.index+splice.removed.length; i++) {
-                binding = this.bindings[i];
-                bindingsRemoved.push(binding);
+            if (itemModel[syntax.transientKey]) {
+                binding = itemModel[syntax.transientKey].binding;
+                delete itemModel[syntax.transientKey];
+            }
+            else {
+                var itemBindingType = _.isFunction(this.itemBinding)?this.itemBinding(itemModel):this.itemBinding;
+                binding = itemBindingType
+                    .extend({
+                        inject:this.itemMixins.inject,
+                        injectionKey:this.itemInjectionKey
+                    })
+                    .initialize({
+                        model:itemModel,
+                        $context:this.$el
+                    })
+                newBindings.push(binding);
+            }
+            bindings[index] = binding;
+        }.bind(this));
+        this.bindings.forEach(function(binding, index) {
+            if (binding.model[syntax.transientKey]) {
                 binding.destroy();
             }
-            this.bindingsRemoved(splice.index, bindingsRemoved);
-            var bindingsAdded = [];
-            for (var i=splice.index; i<splice.index+splice.addedCount; i++) {
-                var itemBinding = _.isFunction(this.itemBinding)?this.itemBinding(this.model[i]):this.itemBinding;
-                bindingsAdded.push(itemBinding
-                        .extend({
-                            inject:this.itemMixins.inject,
-                            injectionKey:this.itemInjectionKey
-                        })
-                        .initialize({
-                            model:this.model[i],
-                            $context:this.$el
-                        })
-                );
+            else {
+                delete binding.model[syntax.transientKey];
             }
-            var args = [splice.index, splice.removed].concat(bindingsAdded);
-            [].splice.apply(this.bindings, args);
-            this.bindingsAdded(splice.index, bindingsAdded);
-            this.bindingsSpliced(splice.index, bindingsAdded, bindingsRemoved);
-        }.bind(this));
+        });
+        this.bindings = bindings;
+        this.update({
+            attachEvents:false
+        });
     },
     attachObservers:function() {
         var itemObserver = new Observe.ArrayObserver(this.model);
@@ -359,12 +382,6 @@ var CollectionBinding = Binding.extend({
         for (var i=0; i<this.bindings.length; i++) {
             this.bindings[i].destroy();
         }
-    },
-    bindingsAdded:function(index, bindings) {
-    },
-    bindingsRemoved:function(index, bindings) {
-    },
-    bindingsSpliced:function(index, added, removed) {
     },
     attachAllEventListeners:function() {
         this.attachEventListeners();
