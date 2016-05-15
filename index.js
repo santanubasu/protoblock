@@ -383,8 +383,24 @@ var CollectionBinding = Binding.extend({
             this.bindings[i].destroy();
         }
     },
+    attachEventListeners:function() {
+        Binding.attachEventListeners.call(this);
+        var selector = "[inject='."+this.itemInjectionKey+"] .-remove-item:not([inject='."+this.itemInjectionKey+"] [inject='."+this.itemInjectionKey+"] .-remove-item)";
+        this.$el.on("click.remove", selector, function(e) {
+            var $item = $(e.target).closest("[inject='."+this.itemInjectionKey+"]");
+            var $items = $item.siblings("[inject='."+this.itemInjectionKey+"]");
+            var index = $items.index($item);
+            this.model.splice(index, 1);
+        })
+    },
+    detachEventListeners:function() {
+        Binding.detachEventListeners.call(this);
+        this.$el.off("click.remove");
+    },
     attachAllEventListeners:function() {
-        this.attachEventListeners();
+        if (this.$el) {
+            this.attachEventListeners();
+        }
         this.bindings.forEach(function(binding) {
             binding.attachAllEventListeners();
         })
