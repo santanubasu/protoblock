@@ -385,10 +385,10 @@ var CollectionBinding = Binding.extend({
     },
     attachEventListeners:function() {
         Binding.attachEventListeners.call(this);
-        var selector = "[inject='."+this.itemInjectionKey+"] .-remove-item:not([inject='."+this.itemInjectionKey+"] [inject='."+this.itemInjectionKey+"] .-remove-item)";
+        var selector = "[inject='."+this.itemInjectionKey+"'] .-remove-item:not([inject='."+this.itemInjectionKey+"'] [inject='."+this.itemInjectionKey+"'] .-remove-item)";
         this.$el.on("click.remove", selector, function(e) {
-            var $item = $(e.target).closest("[inject='."+this.itemInjectionKey+"]");
-            var $items = $item.siblings("[inject='."+this.itemInjectionKey+"]");
+            var $item = $(e.target).closest("[inject='."+this.itemInjectionKey+"']");
+            var $items = $item.siblings("[inject='."+this.itemInjectionKey+"']");
             var index = $items.index($item);
             this.model.splice(index, 1);
         })
