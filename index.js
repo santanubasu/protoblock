@@ -133,6 +133,9 @@ var Binding = Object.extend({
     },
     detachEventListeners:function() {
     },
+    triggerEvent:function(event, parameters) {
+        this.$el.trigger(event, parameters);
+    },
     preRender:function() {
         return this;
     },
