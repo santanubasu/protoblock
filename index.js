@@ -115,6 +115,15 @@ var Binding = Object.extend({
         }
         return ObjectPath.get(root, path);
     },
+    delete:function(path, root) {
+        if (!root) {
+            root = this.model;
+        }
+        if (_.isUndefined(path)) {
+            throw "Path cannot be empty or undefined"
+        }
+        ObjectPath.del(root, path);
+    },
     setContext:function($context) {
         if ($context&&$context.is(this.$context)) {
             return;
