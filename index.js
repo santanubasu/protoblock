@@ -68,7 +68,7 @@ var Binding = Object.extend({
             var args = Array.prototype.slice.call(arguments);
             return this.normalizePath(args
                 .filter(function(part) {
-                    return part.length>0;
+                    return part&&(part.length>0);
                 })
                 .join(".")
             );
