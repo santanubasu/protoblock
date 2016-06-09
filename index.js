@@ -395,6 +395,9 @@ var CollectionBinding = Binding.extend({
             this.bindings[i].destroy();
         }
     },
+    getBinding:function(index) {
+        return this.bindings[index];
+    },
     attachEventListeners:function() {
         Binding.attachEventListeners.call(this);
         var selector = "[inject='."+this.itemInjectionKey+"'] .-remove-item:not([inject='."+this.itemInjectionKey+"'] [inject='."+this.itemInjectionKey+"'] .-remove-item)";
@@ -441,6 +444,7 @@ var ObjectBinding = Binding.extend({
         options = options||{};
         Binding.initialize.call(this, options);
         this.bindings = {};
+        this.injectionMap = {};
         this.observers.children = {};
         this.observers.self = {};
         this.setModel(options.model);
@@ -503,6 +507,7 @@ var ObjectBinding = Binding.extend({
         }
         options.binding.setContext(this.$el);
         this.bindings[options.modelPath][options.viewKey] = options.binding;
+        this.injectionMap[options.binding.injectionKey] = options.binding;
         if (!options.binding.model&&this.model) {
             options.binding.setModel(this.get(options.modelPath));
         }
@@ -518,13 +523,17 @@ var ObjectBinding = Binding.extend({
         for (var key in bindings) {
             var binding = bindings[key];
             var keyParse = binding.parseBindingKey(key);
+            var instance = binding.new(keyParse.options);
             this.addBinding({
                 modelPath:keyParse.modelPath,
                 viewKey:keyParse.viewKey,
-                binding:binding.new(keyParse.options)
+                binding:instance
             });
         }
         return this;
+    },
+    getBinding:function(key) {
+        return this.injectionMap[key];
     },
     attachChildObserver:function(modelPath) {
         this.detachChildObserver(modelPath);
