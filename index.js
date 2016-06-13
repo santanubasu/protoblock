@@ -370,9 +370,13 @@ var CollectionBinding = Binding.extend({
         delete this.observers[""];
         return this;
     },
+    getDisplayBindings:function() {
+        return this.bindings;
+    },
     render:function() {
         var $newEl = $(this.template(this.getRenderModel()));
-        var $itemsEl = $(this.bindings
+        var displayBindings = this.getDisplayBindings();
+        var $itemsEl = $(displayBindings
             .map(function(binding) {
                 return binding.$el
             }))
@@ -410,6 +414,7 @@ var CollectionBinding = Binding.extend({
     },
     detachEventListeners:function() {
         Binding.detachEventListeners.call(this);
+        // TODO the on() call uses a selector, but this doesn't, which doesn't seem right
         this.$el.off("click.remove");
     },
     attachAllEventListeners:function() {
