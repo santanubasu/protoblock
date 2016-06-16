@@ -348,6 +348,7 @@ var CollectionBinding = Binding.extend({
         }.bind(this));
         this.bindings.forEach(function(binding, index) {
             if (binding.model[syntax.transientKey]) {
+                delete binding.model[syntax.transientKey];
                 binding.destroy();
             }
             else {
