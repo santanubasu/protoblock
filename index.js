@@ -564,7 +564,10 @@ var ObjectBinding = Binding.extend({
             }
         }
         for (var observedPath in this.observedPaths) {
-            this.attachSelfObserver(observedPath, this.observedPaths[observedPath]);
+            var paths = observedPath.trim().split(/\s+/);
+            paths.forEach(function(path) {
+                this.attachSelfObserver(path, this.observedPaths[observedPath]);
+            }.bind(this))
         }
     },
     detachChildObserver:function(modelPath) {
