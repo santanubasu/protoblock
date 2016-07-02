@@ -279,7 +279,7 @@ var CollectionBinding = Binding.extend({
         Binding.initialize.call(this, options);
         this.itemInjectionKey = this.itemViewKey;
         this.bindings = [];
-        if (!this.model) {
+        if (!this.model&&options.model) {
             this.setModel(options.model);
         }
         return this;
@@ -455,7 +455,7 @@ var ObjectBinding = Binding.extend({
         this.injectionMap = {};
         this.observers.children = {};
         this.observers.self = {};
-        if (!this.model) {
+        if (!this.model&&options.model) {
             this.setModel(options.model);
         }
         return this;
