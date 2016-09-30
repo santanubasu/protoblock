@@ -158,7 +158,7 @@ var Binding = Object.extend({
     renderDirect:function(options) {
     },
     escapeSelectorValue:function(value) {
-        return value.replace(/\./g, "\\.");
+        return value.replace(/[!"#$%&'()*+,.\/:;<=>?@[\\\]^`{|}~]/g, "\\$&");
     },
     inject:function(options) {
         options = extend(true, {}, options);
