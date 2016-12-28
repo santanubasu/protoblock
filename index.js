@@ -405,6 +405,9 @@ var CollectionBinding = Binding.extend({
     getBinding:function(index) {
         return this.bindings[index];
     },
+    getBindings:function() {
+        return this.bindings;
+    },
     attachEventListeners:function() {
         Binding.attachEventListeners.call(this);
         var selector = "[inject='."+this.itemInjectionKey+"'] .-remove-item:not([inject='."+this.itemInjectionKey+"'] [inject='."+this.itemInjectionKey+"'] .-remove-item)";
