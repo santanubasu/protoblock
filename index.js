@@ -247,11 +247,17 @@ var CollectionBinding = Binding.extend({
             }
             var escapedInjectionKey = this.escapeSelectorValue(this.injectionKey);
             var $itemsEl = this.$context.find("[inject="+escapedInjectionKey+"]");
+            // TODO this will probably not correctly handle bindings with multiple top level elements
             if ("index" in options) {
                 $injectEl.insertAfter($itemsEl.eq(options.index));
             }
             else if (this.$el&&!$injectEl.is(this.$el)) {
-                this.$el.replaceWith($injectEl);
+                this.$el
+                    .first()
+                    .before($injectEl)
+                    .end()
+                    .remove();
+                //this.$el.replaceWith($injectEl);
             }
             else {
                 $injectEl.insertAfter($itemsEl.last());
