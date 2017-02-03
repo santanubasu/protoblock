@@ -27,7 +27,7 @@ function initialize(options) {
 var Binding = Object.extend({
     template:undefined,
     normalizePath:function(observePath) {
-        var objectPath = observePath.replace(arrayPathPattern, ".");
+        var objectPath = observePath.replace(":", ".").replace(arrayPathPattern, ".");
         var length = 0;
         while (length!==objectPath.length) {
             length = objectPath.length;
